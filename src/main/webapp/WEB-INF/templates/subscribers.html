@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Все абоненты</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header>
+    <h1>Список всех абонентов</h1>
+    <a th:href="@{/index.html}" class="home-link">На главную</a>
+</header>
+
+<div class="container">
+
+    <div class="cookie-info">
+        Ваш <b th:text="${visitCount}">N</b>-й визит.
+        Последнее посещение: <b th:text="${lastVisit}">...</b>
+    </div>
+
+    <div th:if="${subscribers.isEmpty()}">
+        <p>В системе нет зарегистрированных абонентов.</p>
+    </div>
+
+    <table th:unless="${subscribers.isEmpty()}">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Телефон</th>
+            <th>Баланс</th>
+            <th>Статус</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="sub : ${subscribers}">
+            <td th:text="${sub.id}">1</td>
+            <td th:text="${sub.name}">Иван Иванов</td>
+            <td th:text="${sub.phoneNumber}">+375...</td>
+            <td th:text="${#numbers.formatDecimal(sub.balance, 1, 2)}">100.00</td>
+            <td th:text="${sub.isBlocked ? 'Заблокирован' : 'Активен'}">Активен</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="3.1"
+             xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd">
+
+    <persistence-unit name="telecom-pu" transaction-type="RESOURCE_LOCAL">
+
+        <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+
+        <class>org.example.entity.Subscriber</class>
+        <class>org.example.entity.Service</class>
+        <class>org.example.entity.Invoice</class>
+
+        <properties>
+
+            <property name="eclipselink.target-database" value="org.eclipse.persistence.platform.database.MySQLPlatform"/>
+            <property name="eclipselink.ddl.default-table-suffix" value="ENGINE=InnoDB"/>
+
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+
+            <property name="jakarta.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/telecom_db"/>
+
+            <property name="jakarta.persistence.jdbc.user" value="root"/>
+            <property name="jakarta.persistence.jdbc.password" value="root"/>
+            <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/>
+
+        </properties>
+
+    </persistence-unit>
+</persistence>

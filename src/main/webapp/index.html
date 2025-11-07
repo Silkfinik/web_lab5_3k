@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Главная - Telecom App</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <h1>Система управления "Telecom App"</h1>
+</header>
+
+<div class="container">
+    <p>
+        Добро пожаловать в систему управления абонентами и услугами.
+        Это приложение разработано в рамках Лабораторной работы №5.
+    </p>
+    <p>
+        Приложение использует Java Servlets, Thymeleaf и JPA (EclipseLink)
+        для взаимодействия с базой данных MySQL.
+    </p>
+
+    <nav>
+        <h2>Меню:</h2>
+        <ul>
+            <li>
+                <a href="app?command=showAllSubscribers">
+                    Показать всех абонентов
+                </a>
+            </li>
+            <li>
+                <a href="app?command=showAllServices">
+                    Показать все доступные услуги
+                </a>
+            </li>
+            <li>
+                <a href="app?command=showUnpaidInvoices">
+                    Показать неоплаченные счета
+                </a>
+            </li>
+
+            <li style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                <a href="app?command=initData"
+                   style="color: #d9534f;"
+                   onclick="return confirm('Вы уверены? Это сотрет все данные в базе!');">
+                    (Админ) Очистить и заполнить базу тестовыми данными
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+</div>
+
+</body>
+</html>

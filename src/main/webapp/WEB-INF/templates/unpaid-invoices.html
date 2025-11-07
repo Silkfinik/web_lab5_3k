@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Неоплаченные счета</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header>
+    <h1>Список неоплаченных счетов</h1>
+    <a th:href="@{/index.html}" class="home-link">На главную</a>
+</header>
+
+<div class="container">
+
+    <div class="cookie-info">
+        Визит: <b th:text="${visitCount}">N</b>.
+        Последнее посещение: <b th:text="${lastVisit}">...</b>
+    </div>
+
+    <div th:if="${invoices.isEmpty()}">
+        <p>Все счета оплачены.</p>
+    </div>
+
+    <table th:unless="${invoices.isEmpty()}">
+        <thead>
+        <tr>
+            <th>ID Счета</th>
+            <th>ID Абонента</th>
+            <th>Сумма (руб.)</th>
+            <th>Дата выставления</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="inv : ${invoices}">
+            <td th:text="${inv.id}">100</td>
+            <td th:text="${inv.subscriber != null ? inv.subscriber.id : 'N/A'}">1</td>
+            <td th:text="${#numbers.formatDecimal(inv.amount, 1, 2)}">100.00</td>
+            <td th:text="${inv.issueDate}">2025-01-01</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>
