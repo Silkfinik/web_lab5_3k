@@ -17,7 +17,6 @@ import java.util.function.Function;
 
 public class InvoiceDaoImpl implements InvoiceDao {
 
-    // Helper-метод для управления транзакциями
     private <T> T executeInTransaction(Function<EntityManager, T> block) {
         EntityManager em = JpaManager.getEntityManager();
         try {
@@ -49,7 +48,6 @@ public class InvoiceDaoImpl implements InvoiceDao {
             CriteriaQuery<Invoice> cq = cb.createQuery(Invoice.class);
             Root<Invoice> root = cq.from(Invoice.class);
 
-            // Использование строк "subscriber" и "id"
             cq.where(cb.equal(root.get("subscriber").get("id"), subscriberId));
 
             return new java.util.ArrayList<>(em.createQuery(cq).getResultList());
@@ -68,7 +66,6 @@ public class InvoiceDaoImpl implements InvoiceDao {
             CriteriaUpdate<Invoice> cu = cb.createCriteriaUpdate(Invoice.class);
             Root<Invoice> root = cu.from(Invoice.class);
 
-            // Использование строк "isPaid" и "id"
             cu.set(root.get("isPaid"), true);
             cu.where(cb.equal(root.get("id"), invoiceId));
 
@@ -86,11 +83,9 @@ public class InvoiceDaoImpl implements InvoiceDao {
         EntityManager em = JpaManager.getEntityManager();
         try {
             CriteriaBuilder cb = em.getCriteriaBuilder();
-            // Запрос возвращает Integer (ID)
             CriteriaQuery<Integer> cq = cb.createQuery(Integer.class);
             Root<Invoice> root = cq.from(Invoice.class);
 
-            // SELECT i.subscriber.id FROM Invoice i WHERE i.id = :invoiceId
             cq.select(root.get("subscriber").get("id"));
             cq.where(cb.equal(root.get("id"), invoiceId));
 
@@ -113,7 +108,6 @@ public class InvoiceDaoImpl implements InvoiceDao {
             CriteriaQuery<Invoice> cq = cb.createQuery(Invoice.class);
             Root<Invoice> root = cq.from(Invoice.class);
 
-            // Использование строки "isPaid"
             cq.where(cb.equal(root.get("isPaid"), false));
 
             return new java.util.ArrayList<>(em.createQuery(cq).getResultList());
@@ -129,7 +123,6 @@ public class InvoiceDaoImpl implements InvoiceDao {
     public Invoice add(Invoice invoice) {
         return executeInTransaction(em -> {
             try {
-                // Если subscriber не управляется (detached), его нужно смержить
                 if (invoice.getSubscriber() != null && !em.contains(invoice.getSubscriber())) {
                     invoice.setSubscriber(em.merge(invoice.getSubscriber()));
                 }

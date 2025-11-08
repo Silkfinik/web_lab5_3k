@@ -1,17 +1,18 @@
 package org.example.db;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import org.example.dao.api.InvoiceDao;
 import org.example.dao.api.ServiceDao;
 import org.example.dao.api.SubscriberDao;
 import org.example.entity.Invoice;
 import org.example.entity.Service;
 import org.example.entity.Subscriber;
-import java.time.LocalDate;
 
-/**
- * Заполняет базу данных тестовыми данными.
- * Трансляция из DataInitializer.kt
- */
+import java.time.LocalDate;
+import java.util.List;
+
 public class DataInitializer {
 
     public static void insertInitialData(
@@ -19,63 +20,62 @@ public class DataInitializer {
             ServiceDao serviceDao,
             InvoiceDao invoiceDao) {
 
-        // System.out.println("Заполнение базы данных тестовыми данными...");
-
         try {
-            // Очистка таблиц в правильном порядке
-            // (Сначала счета, т.к. они ссылаются на абонентов)
-            // (Потом связи абонентов и услуг)
+            subscriberDao.runInTransaction(em -> {
+                CriteriaBuilder cb = em.getCriteriaBuilder();
+                CriteriaQuery<Subscriber> cqSub = cb.createQuery(Subscriber.class);
+                Root<Subscriber> rootSub = cqSub.from(Subscriber.class);
+                cqSub.select(rootSub);
+                List<Subscriber> allSubscribers = em.createQuery(cqSub).getResultList();
+                for (Subscriber sub : allSubscribers) {
+                    em.remove(sub);
+                }
 
-            // В Lab 3 очистка была проще,
-            // но в JPA с внешними ключами лучше удалять в явном порядке.
-            // Самый простой способ, как в Lab 3 - удалить абонентов и услуги,
-            // а JPA (Cascade) удалит всё остальное.
-            subscriberDao.deleteAll();
-            serviceDao.deleteAll();
+                CriteriaQuery<Service> cqSrv = cb.createQuery(Service.class);
+                Root<Service> rootSrv = cqSrv.from(Service.class);
+                cqSrv.select(rootSrv);
+                List<Service> allServices = em.createQuery(cqSrv).getResultList();
+                for (Service srv : allServices) {
+                    em.remove(srv);
+                }
 
+                em.flush();
 
-            // Создание Абонентов
-            Subscriber sub1 = new Subscriber(
-                    "Иван Иванов", "+375291234567", 150.50, false
-            );
-            Subscriber sub2 = new Subscriber(
-                    "Петр Петров", "+375337654321", -50.00, true
-            );
+                Subscriber sub1 = new Subscriber(
+                        "Иван Иванов", "+375291234567", 150.50, false
+                );
+                Subscriber sub2 = new Subscriber(
+                        "Петр Петров", "+375337654321", -50.00, true
+                );
+                em.persist(sub1);
+                em.persist(sub2);
 
-            sub1 = subscriberDao.add(sub1);
-            sub2 = subscriberDao.add(sub2);
+                Service serv1 = new Service("Интернет 50 Мбит/с", 450.00);
+                Service serv2 = new Service("Мобильная связь", 300.00);
+                Service serv3 = new Service("Антивирус", 100.00);
+                em.persist(serv1);
+                em.persist(serv2);
+                em.persist(serv3);
 
-            // Создание Услуг
-            Service serv1 = serviceDao.add(new Service("Интернет 50 Мбит/с", 450.00));
-            Service serv2 = serviceDao.add(new Service("Мобильная связь", 300.00));
-            Service serv3 = serviceDao.add(new Service("Антивирус", 100.00));
+                sub1.getServices().add(serv1);
+                sub1.getServices().add(serv2);
 
-            // Связывание
-            serviceDao.linkServiceToSubscriber(sub1.getId(), serv1.getId());
-            serviceDao.linkServiceToSubscriber(sub1.getId(), serv2.getId());
-            serviceDao.linkServiceToSubscriber(sub2.getId(), serv2.getId());
-            serviceDao.linkServiceToSubscriber(sub2.getId(), serv3.getId());
+                sub2.getServices().add(serv2);
+                sub2.getServices().add(serv3);
 
-            // Создание Счетов
-            invoiceDao.add(new Invoice(
-                    750.00,
-                    LocalDate.parse("2025-09-01"),
-                    true,
-                    sub1
-            ));
-            invoiceDao.add(new Invoice(
-                    400.00,
-                    LocalDate.parse("2025-09-05"),
-                    false,
-                    sub2
-            ));
+                Invoice inv1 = new Invoice(
+                        750.00, LocalDate.parse("2025-09-01"), true, sub1
+                );
+                Invoice inv2 = new Invoice(
+                        400.00, LocalDate.parse("2025-09-05"), false, sub2
+                );
+                em.persist(inv1);
+                em.persist(inv2);
 
-            // System.out.println("Тестовые данные успешно вставлены.");
+            });
 
         } catch (Exception e) {
-            // System.err.println("Ошибка при вставке тестовых данных!");
             e.printStackTrace();
-            // Оборачиваем в DataAccessException, чтобы сервлет поймал
             throw new org.example.exception.DataAccessException("Ошибка при инициализации данных", e);
         }
     }

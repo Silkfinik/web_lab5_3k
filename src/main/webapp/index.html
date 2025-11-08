@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Главная - Telecom App</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,14 +16,6 @@
 </header>
 
 <div class="container">
-    <p>
-        Добро пожаловать в систему управления абонентами и услугами.
-        Это приложение разработано в рамках Лабораторной работы №5.
-    </p>
-    <p>
-        Приложение использует Java Servlets, Thymeleaf и JPA (EclipseLink)
-        для взаимодействия с базой данных MySQL.
-    </p>
 
     <nav>
         <h2>Меню:</h2>
@@ -29,6 +25,13 @@
                     Показать всех абонентов
                 </a>
             </li>
+
+            <li>
+                <a href="app?command=showAddSubscriberForm" style="color: #198754;">
+                    Добавить нового абонента
+                </a>
+            </li>
+
             <li>
                 <a href="app?command=showAllServices">
                     Показать все доступные услуги
@@ -44,7 +47,7 @@
                 <a href="app?command=initData"
                    style="color: #d9534f;"
                    onclick="return confirm('Вы уверены? Это сотрет все данные в базе!');">
-                    (Админ) Очистить и заполнить базу тестовыми данными
+                    Очистить и заполнить базу тестовыми данными
                 </a>
             </li>
 

@@ -21,7 +21,7 @@ import org.example.db.JpaManager;
 import org.example.entity.Invoice;
 import org.example.entity.Service;
 import org.example.entity.Subscriber;
-import org.example.exception.DataAccessException;
+import org.example.exception.DuplicateEntryException;
 
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.WebContext;
@@ -36,18 +36,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Arrays;
 
-/**
- * Главный сервлет-диспетчер.
- * Обрабатывает все запросы, управляет сессиями, cookies и рендерингом Thymeleaf.
- *
- */
 @WebServlet("/app")
 public class MainServlet extends HttpServlet {
 
     private TemplateEngine templateEngine;
     private JakartaServletWebApplication application;
 
-    // DAO
     private SubscriberDao subscriberDao;
     private ServiceDao serviceDao;
     private InvoiceDao invoiceDao;
@@ -56,192 +50,214 @@ public class MainServlet extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
-        // Инициализация DAO
         this.subscriberDao = new SubscriberDaoImpl();
         this.serviceDao = new ServiceDaoImpl();
         this.invoiceDao = new InvoiceDaoImpl();
 
-        // Принудительная инициализация JPA (на всякий случай)
         try {
             JpaManager.getEntityManager().close();
         } catch (Exception e) {
             throw new ServletException("Ошибка инициализации JPA Manager", e);
         }
 
-        // --- Инициализация Thymeleaf ---
         this.application = JakartaServletWebApplication.buildApplication(getServletContext());
 
-        // Настройка резолвера (поиск шаблонов)
         final WebApplicationTemplateResolver templateResolver =
                 new WebApplicationTemplateResolver(this.application);
 
         templateResolver.setTemplateMode(TemplateMode.HTML);
-        // Путь к нашим шаблонам (которые мы скоро создадим)
         templateResolver.setPrefix("/WEB-INF/templates/");
         templateResolver.setSuffix(".html");
         templateResolver.setCharacterEncoding("UTF-8");
-        // Отключаем кэширование для удобства разработки
         templateResolver.setCacheable(false);
 
-        // Создание движка Thymeleaf
         this.templateEngine = new TemplateEngine();
         this.templateEngine.setTemplateResolver(templateResolver);
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        // (Пока что все POST-запросы просто передаем в GET)
-        doGet(req, resp);
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // Установка кодировки ответа
         resp.setContentType("text/html;charset=UTF-8");
 
-        // --- Часть 1, Задание 2: Сессии и Cookies ---
-
-        // 1. Сессия (создаем, если ее нет)
         HttpSession session = req.getSession(true);
-
-        // 2. Cookies (счетчик посещений и дата)
         int visitCount = 0;
         String lastVisit = "Never";
 
-        // Поиск существующих cookies
         Optional<Cookie> visitCookie = findCookie(req, "visitCount");
         Optional<Cookie> lastVisitCookie = findCookie(req, "lastVisit");
 
         if (visitCookie.isPresent()) {
-            try {
-                visitCount = Integer.parseInt(visitCookie.get().getValue());
-            } catch (NumberFormatException e) {
-                visitCount = 0;
-            }
+            visitCount = parseIntSafe(visitCookie.get().getValue(), 0);
         }
         if (lastVisitCookie.isPresent()) {
             lastVisit = lastVisitCookie.get().getValue();
         }
+        visitCount++;
 
-        visitCount++; // Увеличиваем счетчик
-
-        // Обновляем cookies
         String currentVisitTime = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
 
-        Cookie newVisitCountCookie = new Cookie("visitCount", String.valueOf(visitCount));
-        newVisitCountCookie.setMaxAge(60 * 60 * 24 * 365); // 1 год
+        resp.addCookie(createCookie("visitCount", String.valueOf(visitCount), 3600*24*365));
+        resp.addCookie(createCookie("lastVisit", currentVisitTime, 3600*24*365));
 
-        Cookie newLastVisitCookie = new Cookie("lastVisit", currentVisitTime);
-        newLastVisitCookie.setMaxAge(60 * 60 * 24 * 365); // 1 год
-
-        resp.addCookie(newVisitCountCookie);
-        resp.addCookie(newLastVisitCookie);
-
-        // --- Конец Части 1, Задания 2 ---
-
-
-        // Контекст Thymeleaf
         final WebContext ctx = new WebContext(
                 this.application.buildExchange(req, resp)
         );
-
-        // Передаем данные о сессии и cookies в Thymeleaf
         ctx.setVariable("session", session);
         ctx.setVariable("visitCount", visitCount);
         ctx.setVariable("lastVisit", lastVisit);
 
-        // Получаем команду из index.html
         String command = req.getParameter("command");
         if (command == null) {
             command = "default";
         }
 
         try {
-            // Диспетчер команд
-            String templateName; // Имя .html файла для рендеринга
+            String templateName = null;
 
             switch (command) {
-
-                case "initData":
-                    // Вызов статического метода DataInitializer
-                    DataInitializer.insertInitialData(subscriberDao, serviceDao, invoiceDao);
-
-                    // Передача сообщения об успехе в Thymeleaf
-                    ctx.setVariable("message", "База данных успешно очищена и заполнена тестовыми данными.");
-                    templateName = "init-success"; // init-success.html
-                    break;
-
                 case "showAllSubscribers":
-                    // Вызов DAO
                     List<Subscriber> subscribers = subscriberDao.findAll();
-                    // Передача данных в Thymeleaf
                     ctx.setVariable("subscribers", subscribers);
-                    templateName = "subscribers"; // subscribers.html
+                    templateName = "subscribers";
                     break;
 
                 case "showAllServices":
                     List<Service> services = serviceDao.findAll();
                     ctx.setVariable("services", services);
-                    templateName = "services"; // services.html
+                    templateName = "services";
                     break;
 
                 case "showUnpaidInvoices":
                     List<Invoice> invoices = invoiceDao.findUnpaid();
                     ctx.setVariable("invoices", invoices);
-                    templateName = "unpaid-invoices"; // unpaid-invoices.html
+                    templateName = "unpaid-invoices";
                     break;
 
-                // (Другие команды (add, pay) мы добавим позже)
+                case "showAddSubscriberForm":
+                    templateName = "add-subscriber";
+                    break;
+
+                case "block":
+                    int blockId = parseIntSafe(req.getParameter("id"), -1);
+                    if (blockId > 0) {
+                        subscriberDao.block(blockId);
+                    }
+                    resp.sendRedirect("app?command=showAllSubscribers");
+                    return;
+
+                case "pay":
+                    int payId = parseIntSafe(req.getParameter("id"), -1);
+                    if (payId > 0) {
+                        invoiceDao.pay(payId);
+                    }
+                    resp.sendRedirect("app?command=showUnpaidInvoices");
+                    return;
+
+                case "details":
+                    int detailId = parseIntSafe(req.getParameter("id"), -1);
+                    Subscriber sub = subscriberDao.findById(detailId);
+                    if (sub == null) {
+                        throw new Exception("Абонент с ID " + detailId + " не найден.");
+                    }
+                    List<Service> subServices = serviceDao.findBySubscriberId(detailId);
+                    List<Invoice> subInvoices = invoiceDao.findBySubscriberId(detailId);
+
+                    List<Service> allServices = serviceDao.findAll();
+
+                    ctx.setVariable("subscriber", sub);
+                    ctx.setVariable("services", subServices);
+                    ctx.setVariable("invoices", subInvoices);
+
+                    ctx.setVariable("allServices", allServices);
+
+                    templateName = "subscriber-details";
+                    break;
+
+                case "initData":
+                    DataInitializer.insertInitialData(subscriberDao, serviceDao, invoiceDao);
+                    ctx.setVariable("message", "База данных успешно очищена и заполнена тестовыми данными.");
+                    templateName = "init-success";
+                    break;
 
                 default:
-                    // Если команда не распознана, показываем главную
-                    ctx.setVariable("message", "Неизвестная команда: " + command);
-                    templateName = "index"; // index.html
-                    // (Мы не создавали index.html в /WEB-INF/templates/,
-                    // поэтому это приведет к ошибке, если не обработать)
-                    // Лучше перенаправить на статический index.html
                     resp.sendRedirect("index.html");
                     return;
             }
 
-            // Рендеринг Thymeleaf-шаблона
-            templateEngine.process(templateName, ctx, resp.getWriter());
-
-        } catch (DataAccessException e) {
-            // --- Часть 2: Обработка исключений ---
-            // При ошибке (например, сбой БД) перенаправляем на error.html
-            //
-
-            // System.err.println("Критическая ошибка доступа к данным: " + e.getMessage());
-            e.printStackTrace();
-
-            // Передача сообщения об ошибке
-            req.setAttribute("errorMessage", e.getMessage());
-            req.setAttribute("errorCause", e.getCause() != null ? e.getCause().getMessage() : "N/A");
-
-            // Используем RequestDispatcher для перенаправления на /error.html
-            RequestDispatcher dispatcher = getServletContext().getRequestDispatcher("/error.html");
-            dispatcher.forward(req, resp);
+            if (templateName != null) {
+                templateEngine.process(templateName, ctx, resp.getWriter());
+            }
 
         } catch (Exception e) {
-            // Обработка других (неожиданных) ошибок
-            // System.err.println("Неожиданная ошибка: " + e.getMessage());
-            e.printStackTrace();
+            handleError(req, resp, e);
+        }
+    }
 
-            req.setAttribute("errorMessage", "Неожиданная ошибка приложения.");
-            req.setAttribute("errorCause", e.getMessage());
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
 
-            RequestDispatcher dispatcher = getServletContext().getRequestDispatcher("/error.html");
-            dispatcher.forward(req, resp);
+        req.setCharacterEncoding("UTF-8");
+
+        String command = req.getParameter("command");
+        if (command == null) {
+            command = "";
+        }
+
+        try {
+            switch (command) {
+                case "addSubscriber":
+                    String name = req.getParameter("name");
+                    String phone = req.getParameter("phone");
+
+                    if (name == null || name.trim().isEmpty() ||
+                            phone == null || phone.trim().isEmpty()) {
+
+                        final WebContext ctx = new WebContext(this.application.buildExchange(req, resp));
+                        ctx.setVariable("errorMessage", "Имя и телефон не могут быть пустыми.");
+                        templateEngine.process("add-subscriber", ctx, resp.getWriter());
+                        return;
+                    }
+
+                    Subscriber newSubscriber = new Subscriber(name, phone, 0.0, false);
+                    subscriberDao.add(newSubscriber);
+
+                    resp.sendRedirect("app?command=showAllSubscribers");
+                    break;
+
+                case "linkService":
+                    int subscriberId = parseIntSafe(req.getParameter("subscriberId"), -1);
+                    int serviceId = parseIntSafe(req.getParameter("serviceId"), -1);
+
+                    if (subscriberId > 0 && serviceId > 0) {
+                        try {
+                            serviceDao.linkServiceToSubscriber(subscriberId, serviceId);
+                        } catch (DuplicateEntryException e) {
+                            System.err.println("Услуга уже подключена.");
+                        }
+                    }
+                    resp.sendRedirect("app?command=details&id=" + subscriberId);
+                    return;
+
+                default:
+                    resp.sendRedirect("index.html");
+                    break;
+            }
+
+        } catch (DuplicateEntryException e) {
+            final WebContext ctx = new WebContext(this.application.buildExchange(req, resp));
+            templateEngine.process("add-subscriber", ctx, resp.getWriter());
+
+        } catch (Exception e) {
+            handleError(req, resp, e);
         }
     }
 
     /**
-     * Хелпер для поиска Cookie по имени
+     * Хелпер для поиска Cookie
      */
     private Optional<Cookie> findCookie(HttpServletRequest req, String cookieName) {
         if (req.getCookies() == null) {
@@ -250,5 +266,42 @@ public class MainServlet extends HttpServlet {
         return Arrays.stream(req.getCookies())
                 .filter(c -> c.getName().equals(cookieName))
                 .findFirst();
+    }
+
+    /**
+     * Хелпер для создания Cookie
+     */
+    private Cookie createCookie(String name, String value, int maxAge) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setMaxAge(maxAge);
+        cookie.setPath(getServletContext().getContextPath() + "/");
+        return cookie;
+    }
+
+    /**
+     * Хелпер для безопасного парсинга ID
+     */
+    private int parseIntSafe(String value, int defaultValue) {
+        if (value == null) return defaultValue;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Общий обработчик ошибок
+     */
+    private void handleError(HttpServletRequest req, HttpServletResponse resp, Exception e)
+            throws ServletException, IOException {
+
+        e.printStackTrace();
+
+        req.setAttribute("errorMessage", e.getMessage());
+        req.setAttribute("errorCause", e.getCause() != null ? e.getCause().getMessage() : "N/A");
+
+        RequestDispatcher dispatcher = getServletContext().getRequestDispatcher("/error.html");
+        dispatcher.forward(req, resp);
     }
 }

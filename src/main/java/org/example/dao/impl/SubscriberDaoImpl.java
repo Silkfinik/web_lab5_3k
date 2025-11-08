@@ -15,10 +15,11 @@ import org.example.exception.EntryNotFoundException;
 
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Consumer;
+
 
 public class SubscriberDaoImpl implements SubscriberDao {
 
-    // Helper-метод для управления транзакциями (трансляция из Kotlin)
     private <T> T executeInTransaction(Function<EntityManager, T> block) {
         EntityManager em = JpaManager.getEntityManager();
         try {
@@ -30,9 +31,7 @@ public class SubscriberDaoImpl implements SubscriberDao {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            // System.err.println("JPA transaction failed: " + e.getMessage());
 
-            // Преобразование исключений JPA
             Exception exceptionToThrow;
             if (e instanceof PersistenceException) {
                 exceptionToThrow = new DataAccessException("Ошибка доступа к данным JPA.", e);
@@ -40,15 +39,32 @@ public class SubscriberDaoImpl implements SubscriberDao {
                 exceptionToThrow = e;
             }
 
-            // Мы должны выбросить RuntimeException, т.к. Function.apply не позволяет
-            // выбрасывать проверяемые исключения, но наши кастомные исключения
-            // и так являются RuntimeException.
             if (exceptionToThrow instanceof RuntimeException) {
                 throw (RuntimeException) exceptionToThrow;
             } else {
                 throw new RuntimeException(exceptionToThrow);
             }
 
+        } finally {
+            em.close();
+        }
+    }
+
+    private void executeInTransaction(Consumer<EntityManager> block) {
+        EntityManager em = JpaManager.getEntityManager();
+        try {
+            em.getTransaction().begin();
+            block.accept(em);
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
+            } else {
+                throw new RuntimeException(e);
+            }
         } finally {
             em.close();
         }
@@ -62,7 +78,6 @@ public class SubscriberDaoImpl implements SubscriberDao {
             CriteriaQuery<Subscriber> cq = cb.createQuery(Subscriber.class);
             Root<Subscriber> root = cq.from(Subscriber.class);
 
-            // Использование строки "id" вместо Subscriber_.id
             cq.where(cb.equal(root.get("id"), id));
 
             return em.createQuery(cq).getSingleResult();
@@ -99,7 +114,6 @@ public class SubscriberDaoImpl implements SubscriberDao {
             CriteriaUpdate<Subscriber> cu = cb.createCriteriaUpdate(Subscriber.class);
             Root<Subscriber> root = cu.from(Subscriber.class);
 
-            // Использование строк "isBlocked" и "id"
             cu.set(root.get("isBlocked"), true);
             cu.where(cb.equal(root.get("id"), subscriberId));
 
@@ -108,7 +122,7 @@ public class SubscriberDaoImpl implements SubscriberDao {
             if (rowsAffected == 0) {
                 throw new EntryNotFoundException("Абонент с ID " + subscriberId + " не найден.");
             }
-            return null; // т.к. executeInTransaction ожидает возврат
+            return null;
         });
     }
 
@@ -119,7 +133,6 @@ public class SubscriberDaoImpl implements SubscriberDao {
                 em.persist(subscriber);
                 return subscriber;
             } catch (PersistenceException e) {
-                // Проверка на нарушение UNIQUE constraint
                 if (e.getMessage() != null && e.getMessage().contains("UNIQUE_")) {
                     throw new DuplicateEntryException("Абонент с номером " + subscriber.getPhoneNumber() + " уже существует.", e);
                 }
@@ -131,13 +144,21 @@ public class SubscriberDaoImpl implements SubscriberDao {
     @Override
     public void deleteAll() {
         executeInTransaction(em -> {
-            // JPA не поддерживает CriteriaDelete с каскадом,
-            // поэтому находим и удаляем вручную, как в Lab 3
-            List<Subscriber> allSubscribers = findAll(); // Используем существующий метод
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery<Subscriber> cq = cb.createQuery(Subscriber.class);
+            Root<Subscriber> root = cq.from(Subscriber.class);
+            cq.select(root);
+            List<Subscriber> allSubscribers = em.createQuery(cq).getResultList();
+
             for (Subscriber subscriber : allSubscribers) {
-                em.remove(em.contains(subscriber) ? subscriber : em.merge(subscriber));
+                em.remove(subscriber);
             }
             return null;
         });
+    }
+
+    @Override
+    public void runInTransaction(Consumer<EntityManager> block) {
+        this.executeInTransaction(block);
     }
 }

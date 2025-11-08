@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Новый абонент</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header>
+    <h1>Добавление нового абонента</h1>
+    <a th:href="@{/index.html}" class="home-link">На главную</a>
+</header>
+
+<div class="container">
+
+    <form th:action="@{/app}" method="POST">
+
+        <input type="hidden" name="command" value="addSubscriber" />
+
+        <div class="form-group">
+            <label for="name">Имя:</label>
+            <input type="text" id="name" name="name" class="form-control"
+                   placeholder="Например, Иван Иванов" required />
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Номер телефона:</label>
+            <input type="tel" id="phone" name="phone" class="form-control"
+                   placeholder="Например, +375291234567" required />
+        </div>
+
+        <button type="submit" class="btn">Создать абонента</button>
+
+        <div th:if="${errorMessage}"
+             class="error-container"
+             style="margin-top: 20px; background-color: #fdf7f7;">
+            <p><b>Ошибка:</b> <span th:text="${errorMessage}">...</span></p>
+        </div>
+
+    </form>
+
+</div>
+
+</body>
+</html>

@@ -19,7 +19,6 @@ import java.util.function.Function;
 
 public class ServiceDaoImpl implements ServiceDao {
 
-    // Helper-метод для управления транзакциями
     private <T> T executeInTransaction(Function<EntityManager, T> block) {
         EntityManager em = JpaManager.getEntityManager();
         try {
@@ -67,8 +66,6 @@ public class ServiceDaoImpl implements ServiceDao {
             CriteriaQuery<Service> cq = cb.createQuery(Service.class);
             Root<Service> root = cq.from(Service.class);
 
-            // Создаем JOIN (FROM Service s JOIN s.subscribers sub)
-            // Использование строк "subscribers" и "id"
             Join<Service, Subscriber> subscribersJoin = root.join("subscribers");
             cq.where(cb.equal(subscribersJoin.get("id"), subscriberId));
 
@@ -125,9 +122,14 @@ public class ServiceDaoImpl implements ServiceDao {
     @Override
     public void deleteAll() {
         executeInTransaction(em -> {
-            List<Service> allServices = findAll();
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery<Service> cq = cb.createQuery(Service.class);
+            Root<Service> root = cq.from(Service.class);
+            cq.select(root);
+            List<Service> allServices = em.createQuery(cq).getResultList();
+
             for (Service service : allServices) {
-                em.remove(em.contains(service) ? service : em.merge(service));
+                em.remove(service);
             }
             return null;
         });
