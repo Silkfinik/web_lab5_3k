@@ -32,6 +32,14 @@
             <p><b>Ошибка:</b> <span th:text="${errorMessage}">...</span></p>
         </div>
     </form>
+
+    <div class="auth-footer">
+        <span>Уже есть аккаунт?</span>
+        <a th:href="@{/app(command='showLoginForm')}" class="btn-outline">
+            Войти
+        </a>
+    </div>
+
 </div>
 </body>
 </html>

@@ -8,9 +8,9 @@ import org.example.dao.api.ServiceDao;
 import org.example.dao.api.SubscriberDao;
 import org.example.dao.api.UserDao;
 import org.example.entity.*;
+import org.example.util.PasswordUtil;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public class DataInitializer {
 
@@ -18,40 +18,33 @@ public class DataInitializer {
             SubscriberDao subscriberDao,
             ServiceDao serviceDao,
             InvoiceDao invoiceDao,
-            UserDao userDao) { // Добавили UserDao
+            UserDao userDao) {
 
         try {
             subscriberDao.runInTransaction(em -> {
-                // Очистка таблиц
                 CriteriaBuilder cb = em.getCriteriaBuilder();
 
-                // Удаляем Invoice
                 CriteriaQuery<Invoice> cqInv = cb.createQuery(Invoice.class);
                 cqInv.select(cqInv.from(Invoice.class));
                 for (Invoice i : em.createQuery(cqInv).getResultList()) em.remove(i);
 
-                // Удаляем Subscriber
                 CriteriaQuery<Subscriber> cqSub = cb.createQuery(Subscriber.class);
                 cqSub.select(cqSub.from(Subscriber.class));
                 for (Subscriber s : em.createQuery(cqSub).getResultList()) em.remove(s);
 
-                // Удаляем Service
                 CriteriaQuery<Service> cqSrv = cb.createQuery(Service.class);
                 cqSrv.select(cqSrv.from(Service.class));
                 for (Service s : em.createQuery(cqSrv).getResultList()) em.remove(s);
 
-                // Удаляем User
                 CriteriaQuery<User> cqUser = cb.createQuery(User.class);
                 cqUser.select(cqUser.from(User.class));
                 for (User u : em.createQuery(cqUser).getResultList()) em.remove(u);
 
                 em.flush();
 
-                // 1. Создаем Админа
-                User admin = new User("admin", "admin", Role.ADMIN);
+                User admin = new User("admin", PasswordUtil.hash("admin"), Role.ADMIN);
                 em.persist(admin);
 
-                // 2. Создаем тестовые данные абонентов
                 Subscriber sub1 = new Subscriber("Иван Иванов", "+375291234567", 150.50, false);
                 Subscriber sub2 = new Subscriber("Петр Петров", "+375337654321", -50.00, true);
                 em.persist(sub1);

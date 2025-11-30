@@ -38,12 +38,14 @@ public class UserDaoImpl implements UserDao {
         return executeInTransaction(em -> {
             try {
                 em.persist(user);
+                em.flush();
                 return user;
             } catch (PersistenceException e) {
-                if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
+                Throwable cause = e.getCause();
+                if (cause != null && cause.getMessage() != null && cause.getMessage().contains("Duplicate entry")) {
                     throw new DuplicateEntryException("Пользователь с таким логином уже существует.", e);
                 }
-                throw new DataAccessException("Ошибка при регистрации пользователя.", e);
+                throw e;
             }
         });
     }

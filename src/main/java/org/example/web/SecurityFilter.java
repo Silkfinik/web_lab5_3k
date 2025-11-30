@@ -28,8 +28,14 @@ public class SecurityFilter implements Filter {
 
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
-        HttpSession session = req.getSession();
+        String path = req.getRequestURI().substring(req.getContextPath().length());
 
+        if (path.startsWith("/css/") || path.startsWith("/js/") || path.startsWith("/images/") || path.equals("/favicon.ico")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        HttpSession session = req.getSession();
         String command = req.getParameter("command");
         if (command == null) command = "home";
 
@@ -46,9 +52,9 @@ public class SecurityFilter implements Filter {
             session.setAttribute("flashErrorMessage", errorMsg);
 
             if (role == Role.GUEST) {
-                resp.sendRedirect("app?command=showLoginForm");
+                resp.sendRedirect(req.getContextPath() + "/app?command=showLoginForm");
             } else {
-                resp.sendRedirect("app?command=home");
+                resp.sendRedirect(req.getContextPath() + "/app?command=home");
             }
         }
     }

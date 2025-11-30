@@ -33,7 +33,12 @@
         </div>
     </form>
 
-    <p style="margin-top: 20px;">Нет аккаунта? <a th:href="@{/app(command='showRegisterForm')}">Зарегистрироваться</a></p>
+    <div class="auth-footer">
+        <span>Нет аккаунта?</span>
+        <a th:href="@{/app(command='showRegisterForm')}" class="btn-outline">
+            Зарегистрироваться
+        </a>
+    </div>
 </div>
 
 </body>

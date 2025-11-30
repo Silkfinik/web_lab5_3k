@@ -267,3 +267,35 @@ tbody tr:last-child td {
 .connect-form .btn {
     flex-shrink: 0;
 }
+
+.auth-footer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--outline);
+    text-align: center;
+    color: var(--on-surface);
+}
+
+.btn-outline {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 10px 24px;
+
+    font-size: 0.95em;
+    font-weight: 500;
+    text-decoration: none;
+
+    color: var(--primary);
+    background-color: transparent;
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-full);
+
+    transition: all 0.3s ease;
+}
+
+.btn-outline:hover {
+    background-color: var(--primary);
+    color: var(--on-primary);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}

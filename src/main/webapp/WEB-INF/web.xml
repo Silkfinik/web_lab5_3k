@@ -10,7 +10,7 @@
     </filter>
     <filter-mapping>
         <filter-name>SecurityFilter</filter-name>
-        <url-pattern>/app/*</url-pattern>
+        <url-pattern>/*</url-pattern>
     </filter-mapping>
 
     <filter>
@@ -19,12 +19,8 @@
     </filter>
     <filter-mapping>
         <filter-name>FrontControllerFilter</filter-name>
-        <url-pattern>/app/*</url-pattern>
+        <url-pattern>/*</url-pattern>
     </filter-mapping>
-
-    <welcome-file-list>
-        <welcome-file>index.html</welcome-file>
-    </welcome-file-list>
 
     <error-page>
         <error-code>404</error-code>
