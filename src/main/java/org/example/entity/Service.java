@@ -69,7 +69,7 @@ public class Service {
         this.subscribers = subscribers;
     }
 
-    // --- equals, hashCode, toString (аналоги data class) ---
+    // --- equals, hashCode, toString ---
 
     @Override
     public boolean equals(Object o) {

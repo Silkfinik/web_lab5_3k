@@ -49,11 +49,9 @@ public class Subscriber {
 
     // --- Конструкторы, Геттеры/Сеттеры, equals/hashCode ---
 
-    // JPA требует пустой конструктор
     public Subscriber() {
     }
 
-    // Удобный конструктор
     public Subscriber(String name, String phoneNumber, double balance, boolean isBlocked) {
         this.name = name;
         this.phoneNumber = phoneNumber;
@@ -119,7 +117,7 @@ public class Subscriber {
         this.services = services;
     }
 
-    // --- equals, hashCode, toString (аналоги data class) ---
+    // --- equals, hashCode, toString ---
 
     @Override
     public boolean equals(Object o) {

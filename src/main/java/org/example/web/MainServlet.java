@@ -23,6 +23,8 @@ import org.example.entity.Service;
 import org.example.entity.Subscriber;
 import org.example.exception.DuplicateEntryException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.WebContext;
 import org.thymeleaf.templatemode.TemplateMode;
@@ -38,6 +40,8 @@ import java.util.Arrays;
 
 @WebServlet("/app")
 public class MainServlet extends HttpServlet {
+
+    private static final Logger logger = LoggerFactory.getLogger(MainServlet.class);
 
     private TemplateEngine templateEngine;
     private JakartaServletWebApplication application;
@@ -57,6 +61,7 @@ public class MainServlet extends HttpServlet {
         try {
             JpaManager.getEntityManager().close();
         } catch (Exception e) {
+            logger.error("Ошибка при принудительной инициализации JPA Manager", e);
             throw new ServletException("Ошибка инициализации JPA Manager", e);
         }
 
@@ -73,6 +78,8 @@ public class MainServlet extends HttpServlet {
 
         this.templateEngine = new TemplateEngine();
         this.templateEngine.setTemplateResolver(templateResolver);
+
+        logger.info("MainServlet успешно инициализирован");
     }
 
     @Override
@@ -105,6 +112,7 @@ public class MainServlet extends HttpServlet {
         final WebContext ctx = new WebContext(
                 this.application.buildExchange(req, resp)
         );
+
         ctx.setVariable("session", session);
         ctx.setVariable("visitCount", visitCount);
         ctx.setVariable("lastVisit", lastVisit);
@@ -113,6 +121,8 @@ public class MainServlet extends HttpServlet {
         if (command == null) {
             command = "default";
         }
+
+        logger.debug("Processing GET command: {}", command);
 
         try {
             String templateName = null;
@@ -144,6 +154,7 @@ public class MainServlet extends HttpServlet {
                     int blockId = parseIntSafe(req.getParameter("id"), -1);
                     if (blockId > 0) {
                         subscriberDao.block(blockId);
+                        logger.info("Blocking subscriber with id: {}", blockId);
                     }
                     resp.sendRedirect("app?command=showAllSubscribers");
                     return;
@@ -152,6 +163,7 @@ public class MainServlet extends HttpServlet {
                     int payId = parseIntSafe(req.getParameter("id"), -1);
                     if (payId > 0) {
                         invoiceDao.pay(payId);
+                        logger.info("Paying invoice with id: {}", payId);
                     }
                     resp.sendRedirect("app?command=showUnpaidInvoices");
                     return;
@@ -177,6 +189,7 @@ public class MainServlet extends HttpServlet {
                     break;
 
                 case "initData":
+                    logger.warn("ADMIN COMMAND: Re-initializing database!");
                     DataInitializer.insertInitialData(subscriberDao, serviceDao, invoiceDao);
                     ctx.setVariable("message", "База данных успешно очищена и заполнена тестовыми данными.");
                     templateName = "init-success";
@@ -207,6 +220,8 @@ public class MainServlet extends HttpServlet {
             command = "";
         }
 
+        logger.debug("Processing POST command: {}", command);
+
         try {
             switch (command) {
                 case "addSubscriber":
@@ -216,6 +231,8 @@ public class MainServlet extends HttpServlet {
                     if (name == null || name.trim().isEmpty() ||
                             phone == null || phone.trim().isEmpty()) {
 
+                        logger.warn("Add subscriber failed: validation error.");
+
                         final WebContext ctx = new WebContext(this.application.buildExchange(req, resp));
                         ctx.setVariable("errorMessage", "Имя и телефон не могут быть пустыми.");
                         templateEngine.process("add-subscriber", ctx, resp.getWriter());
@@ -224,6 +241,7 @@ public class MainServlet extends HttpServlet {
 
                     Subscriber newSubscriber = new Subscriber(name, phone, 0.0, false);
                     subscriberDao.add(newSubscriber);
+                    logger.info("New subscriber added with id: {}", newSubscriber.getId());
 
                     resp.sendRedirect("app?command=showAllSubscribers");
                     break;
@@ -235,8 +253,9 @@ public class MainServlet extends HttpServlet {
                     if (subscriberId > 0 && serviceId > 0) {
                         try {
                             serviceDao.linkServiceToSubscriber(subscriberId, serviceId);
+                            logger.info("Linked service {} to subscriber {}", serviceId, subscriberId);
                         } catch (DuplicateEntryException e) {
-                            System.err.println("Услуга уже подключена.");
+                            logger.warn("Service link failed: {}", e.getMessage());
                         }
                     }
                     resp.sendRedirect("app?command=details&id=" + subscriberId);
@@ -248,6 +267,7 @@ public class MainServlet extends HttpServlet {
             }
 
         } catch (DuplicateEntryException e) {
+            logger.warn("Add subscriber failed: {}", e.getMessage());
             final WebContext ctx = new WebContext(this.application.buildExchange(req, resp));
             templateEngine.process("add-subscriber", ctx, resp.getWriter());
 
@@ -263,6 +283,7 @@ public class MainServlet extends HttpServlet {
         if (req.getCookies() == null) {
             return Optional.empty();
         }
+
         return Arrays.stream(req.getCookies())
                 .filter(c -> c.getName().equals(cookieName))
                 .findFirst();
@@ -296,7 +317,7 @@ public class MainServlet extends HttpServlet {
     private void handleError(HttpServletRequest req, HttpServletResponse resp, Exception e)
             throws ServletException, IOException {
 
-        e.printStackTrace();
+        logger.error("Критическая ошибка при обработке запроса: {}", e.getMessage(), e);
 
         req.setAttribute("errorMessage", e.getMessage());
         req.setAttribute("errorCause", e.getCause() != null ? e.getCause().getMessage() : "N/A");

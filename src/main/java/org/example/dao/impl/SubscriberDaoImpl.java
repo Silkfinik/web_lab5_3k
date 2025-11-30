@@ -14,9 +14,8 @@ import org.example.exception.DuplicateEntryException;
 import org.example.exception.EntryNotFoundException;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Consumer;
-
+import java.util.function.Function;
 
 public class SubscriberDaoImpl implements SubscriberDao {
 
@@ -31,20 +30,10 @@ public class SubscriberDaoImpl implements SubscriberDao {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-
-            Exception exceptionToThrow;
             if (e instanceof PersistenceException) {
-                exceptionToThrow = new DataAccessException("Ошибка доступа к данным JPA.", e);
-            } else {
-                exceptionToThrow = e;
+                throw new DataAccessException("Ошибка доступа к данным JPA.", e);
             }
-
-            if (exceptionToThrow instanceof RuntimeException) {
-                throw (RuntimeException) exceptionToThrow;
-            } else {
-                throw new RuntimeException(exceptionToThrow);
-            }
-
+            throw new RuntimeException(e);
         } finally {
             em.close();
         }
@@ -60,11 +49,7 @@ public class SubscriberDaoImpl implements SubscriberDao {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            } else {
-                throw new RuntimeException(e);
-            }
+            throw new RuntimeException(e);
         } finally {
             em.close();
         }
@@ -74,16 +59,7 @@ public class SubscriberDaoImpl implements SubscriberDao {
     public Subscriber findById(int id) {
         EntityManager em = JpaManager.getEntityManager();
         try {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<Subscriber> cq = cb.createQuery(Subscriber.class);
-            Root<Subscriber> root = cq.from(Subscriber.class);
-
-            cq.where(cb.equal(root.get("id"), id));
-
-            return em.createQuery(cq).getSingleResult();
-
-        } catch (jakarta.persistence.NoResultException e) {
-            return null;
+            return em.find(Subscriber.class, id);
         } catch (Exception e) {
             throw new DataAccessException("Ошибка при поиске абонента.", e);
         } finally {
@@ -118,11 +94,9 @@ public class SubscriberDaoImpl implements SubscriberDao {
             cu.where(cb.equal(root.get("id"), subscriberId));
 
             int rowsAffected = em.createQuery(cu).executeUpdate();
-
             if (rowsAffected == 0) {
                 throw new EntryNotFoundException("Абонент с ID " + subscriberId + " не найден.");
             }
-            return null;
         });
     }
 
@@ -133,8 +107,8 @@ public class SubscriberDaoImpl implements SubscriberDao {
                 em.persist(subscriber);
                 return subscriber;
             } catch (PersistenceException e) {
-                if (e.getMessage() != null && e.getMessage().contains("UNIQUE_")) {
-                    throw new DuplicateEntryException("Абонент с номером " + subscriber.getPhoneNumber() + " уже существует.", e);
+                if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
+                    throw new DuplicateEntryException("Логин или телефон уже заняты.", e);
                 }
                 throw new DataAccessException("Ошибка при добавлении абонента.", e);
             }
@@ -147,13 +121,10 @@ public class SubscriberDaoImpl implements SubscriberDao {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<Subscriber> cq = cb.createQuery(Subscriber.class);
             Root<Subscriber> root = cq.from(Subscriber.class);
-            cq.select(root);
             List<Subscriber> allSubscribers = em.createQuery(cq).getResultList();
-
             for (Subscriber subscriber : allSubscribers) {
                 em.remove(subscriber);
             }
-            return null;
         });
     }
 

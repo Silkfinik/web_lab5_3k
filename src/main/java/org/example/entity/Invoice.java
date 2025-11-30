@@ -79,7 +79,7 @@ public class Invoice {
         this.subscriber = subscriber;
     }
 
-    // --- equals, hashCode, toString (аналоги data class) ---
+    // --- equals, hashCode, toString ---
 
     @Override
     public boolean equals(Object o) {
