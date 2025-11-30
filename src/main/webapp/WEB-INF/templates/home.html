@@ -8,19 +8,23 @@
 <body>
 
 <header>
-    <h1>Система управления "Telecom App"</h1>
+    <div class="header-content">
+        <h1 style="font-size: 1.8em; margin: 0;">Telecom App</h1>
 
-    <div style="margin-top: 10px; font-size: 0.9em;">
-        <span th:if="${currentUser == null}">
-            Гость |
-            <a th:href="@{/app(command='showLoginForm')}" class="action-link-green">Войти</a> |
-            <a th:href="@{/app(command='showRegisterForm')}" class="action-link">Регистрация</a>
-        </span>
+        <div class="header-actions">
+            <th:block th:if="${currentUser == null}">
+                <a th:href="@{/app(command='showLoginForm')}" class="btn-header-outline">Войти</a>
+                <a th:href="@{/app(command='showRegisterForm')}" class="btn-header-fill">Регистрация</a>
+            </th:block>
 
-        <span th:if="${currentUser != null}">
-            Вы вошли как: <b th:text="${currentUser.login}">User</b> (<span th:text="${currentUser.role}">ROLE</span>) |
-            <a th:href="@{/app(command='logout')}" class="action-link-red">Выйти</a>
-        </span>
+            <th:block th:if="${currentUser != null}">
+                <span class="user-info">
+                    <span th:text="${currentUser.login}" style="font-weight: bold;">User</span>
+                    <span style="opacity: 0.8; font-size: 0.9em;">(<span th:text="${currentUser.role}">ROLE</span>)</span>
+                </span>
+                <a th:href="@{/app(command='logout')}" class="btn-header-outline" style="font-size: 0.9em; padding: 6px 14px;">Выйти</a>
+            </th:block>
+        </div>
     </div>
 </header>
 
@@ -30,41 +34,48 @@
         <p th:text="${errorMessage}">Ошибка доступа</p>
     </div>
 
-    <nav>
-        <h2>Меню:</h2>
+    <div th:if="${currentUser == null}" class="hero-section">
+        <h2 class="hero-title">Добро пожаловать в Telecom App</h2>
+        <p class="hero-subtitle">
+            Удобная система управления услугами связи. Контролируйте баланс,
+            подключайте новые тарифы и оплачивайте счета в один клик.
+        </p>
+    </div>
+
+    <nav th:if="${currentUser != null}">
+        <h2>Панель управления</h2>
+        <p style="color: #666; margin-bottom: 20px;">Выберите действие из списка ниже:</p>
+
         <ul>
-            <li th:if="${currentUser != null}">
+            <li>
                 <a th:href="@{/app(command='showAllSubscribers')}">Показать всех абонентов</a>
             </li>
 
-            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}">
+            <li th:if="${currentUser.role.name() == 'ADMIN'}">
                 <a th:href="@{/app(command='showAddSubscriberForm')}" style="color: #198754;">
                     Добавить нового абонента
                 </a>
             </li>
 
-            <li th:if="${currentUser != null}">
+            <li>
                 <a th:href="@{/app(command='showAllServices')}">Показать все услуги</a>
             </li>
 
-            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}">
+            <li th:if="${currentUser.role.name() == 'ADMIN'}">
                 <a th:href="@{/app(command='showUnpaidInvoices')}">Неоплаченные счета</a>
             </li>
 
-            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}"
+            <li th:if="${currentUser.role.name() == 'ADMIN'}"
                 style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
                 <a th:href="@{/app(command='initData')}"
                    style="color: #d9534f;"
-                   onclick="return confirm('Сбросить базу данных и создать админа по умолчанию?');">
-                    Сброс БД
+                   onclick="return confirm('Сбросить базу данных?');">
+                    Сброс БД (Администратор)
                 </a>
             </li>
         </ul>
-
-        <div th:if="${currentUser == null}">
-            <p>Пожалуйста, войдите в систему или зарегистрируйтесь, чтобы увидеть меню.</p>
-        </div>
     </nav>
+
 </div>
 
 </body>
