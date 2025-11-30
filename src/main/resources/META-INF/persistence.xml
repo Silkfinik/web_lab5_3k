@@ -11,6 +11,7 @@
         <class>org.example.entity.Subscriber</class>
         <class>org.example.entity.Service</class>
         <class>org.example.entity.Invoice</class>
+        <class>org.example.entity.User</class>
 
         <properties>
 

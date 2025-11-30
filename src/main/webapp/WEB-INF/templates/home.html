@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Главная - Telecom App</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header>
+    <h1>Система управления "Telecom App"</h1>
+    <div style="margin-top: 10px; font-size: 0.9em;">
+        <a th:href="@{/app(command='showRegisterForm')}" class="action-link">Регистрация</a>
+    </div>
+</header>
+
+<div class="container">
+    <nav>
+        <h2>Меню:</h2>
+        <ul>
+            <li><a th:href="@{/app(command='showAllSubscribers')}">Показать всех абонентов</a></li>
+            <li><a th:href="@{/app(command='showAddSubscriberForm')}" style="color: #198754;">Добавить нового абонента</a></li>
+            <li><a th:href="@{/app(command='showAllServices')}">Показать все услуги</a></li>
+            <li><a th:href="@{/app(command='showUnpaidInvoices')}">Неоплаченные счета</a></li>
+            <li style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                <a th:href="@{/app(command='initData')}" style="color: #d9534f;" onclick="return confirm('Сбросить базу данных?');">Сброс БД</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>
