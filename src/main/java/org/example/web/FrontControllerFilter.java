@@ -6,14 +6,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.example.dao.api.InvoiceDao;
-import org.example.dao.api.ServiceDao;
-import org.example.dao.api.SubscriberDao;
-import org.example.dao.api.UserDao;
-import org.example.dao.impl.InvoiceDaoImpl;
-import org.example.dao.impl.ServiceDaoImpl;
-import org.example.dao.impl.SubscriberDaoImpl;
-import org.example.dao.impl.UserDaoImpl;
+import org.example.dao.api.*;
+import org.example.dao.impl.*;
 import org.example.db.DataInitializer;
 import org.example.db.JpaManager;
 import org.example.entity.*;
@@ -30,10 +24,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
-@WebFilter(urlPatterns = "/app/*")
 public class FrontControllerFilter implements Filter {
 
     private static final Logger logger = LoggerFactory.getLogger(FrontControllerFilter.class);
@@ -63,8 +55,6 @@ public class FrontControllerFilter implements Filter {
 
         this.templateEngine = new TemplateEngine();
         this.templateEngine.setTemplateResolver(templateResolver);
-
-        logger.info("FrontControllerFilter инициализирован");
     }
 
     @Override
@@ -77,8 +67,7 @@ public class FrontControllerFilter implements Filter {
 
         String command = req.getParameter("command");
         if (command == null) {
-            // Если команды нет, по умолчанию отправляем на главную
-            processTemplate("home", req, resp);
+            resp.sendRedirect("app?command=home");
             return;
         }
 
@@ -101,9 +90,17 @@ public class FrontControllerFilter implements Filter {
             case "home":
                 templateName = "home";
                 break;
+            case "showLoginForm":
+                templateName = "login";
+                break;
             case "showRegisterForm":
                 templateName = "register";
                 break;
+            case "logout":
+                req.getSession().invalidate();
+                resp.sendRedirect("app?command=home");
+                return;
+
             case "showAllSubscribers":
                 ctx.setVariable("subscribers", subscriberDao.findAll());
                 templateName = "subscribers";
@@ -134,8 +131,8 @@ public class FrontControllerFilter implements Filter {
                 resp.sendRedirect("app?command=showUnpaidInvoices");
                 return;
             case "initData":
-                DataInitializer.insertInitialData(subscriberDao, serviceDao, invoiceDao);
-                ctx.setVariable("message", "База данных успешно пересоздана.");
+                DataInitializer.insertInitialData(subscriberDao, serviceDao, invoiceDao, userDao);
+                ctx.setVariable("message", "База данных сброшена. Создан Admin (login: admin, pass: admin)");
                 templateName = "init-success";
                 break;
             default:
@@ -151,6 +148,9 @@ public class FrontControllerFilter implements Filter {
     private void processPost(String command, HttpServletRequest req, HttpServletResponse resp) throws Exception {
         try {
             switch (command) {
+                case "login":
+                    handleLogin(req, resp);
+                    break;
                 case "register":
                     handleRegistration(req, resp);
                     break;
@@ -165,13 +165,30 @@ public class FrontControllerFilter implements Filter {
                     break;
             }
         } catch (DuplicateEntryException e) {
-            // Обработка ошибок дубликатов (например, при регистрации)
             WebContext ctx = buildContext(req, resp);
             ctx.setVariable("errorMessage", e.getMessage());
-            // Возвращаем пользователя на форму, которая вызвала ошибку
-            String source = req.getParameter("source"); // можно передавать скрытое поле
-            String errorTemplate = (source != null && source.equals("register")) ? "register" : "add-subscriber";
+            String source = req.getParameter("source");
+            String errorTemplate = "home";
+            if ("register".equals(source)) errorTemplate = "register";
+            else if ("addSubscriber".equals(source)) errorTemplate = "add-subscriber";
+
             templateEngine.process(errorTemplate, ctx, resp.getWriter());
+        }
+    }
+
+    private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String login = req.getParameter("login");
+        String pass = req.getParameter("password");
+
+        User user = userDao.findByLogin(login);
+
+        if (user != null && user.getPassword().equals(pass)) {
+            req.getSession().setAttribute("user", user);
+            resp.sendRedirect("app?command=home");
+        } else {
+            WebContext ctx = buildContext(req, resp);
+            ctx.setVariable("errorMessage", "Неверный логин или пароль");
+            templateEngine.process("login", ctx, resp.getWriter());
         }
     }
 
@@ -184,20 +201,20 @@ public class FrontControllerFilter implements Filter {
         }
 
         User user = new User(login, pass, Role.USER);
-        userDao.add(user);
-        logger.info("Registered new user: {}", login);
+        // Чит для регистрации админа вручную оставим, но основной способ теперь через initData
+        if ("admin".equalsIgnoreCase(login)) {
+            user.setRole(Role.ADMIN);
+        }
 
-        // После регистрации перенаправляем на главную
+        userDao.add(user);
+        req.getSession().setAttribute("user", user);
         resp.sendRedirect("app?command=home");
     }
 
     private void handleAddSubscriber(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String name = req.getParameter("name");
         String phone = req.getParameter("phone");
-
-        if (name == null || name.isBlank() || phone == null || phone.isBlank()) {
-            throw new DuplicateEntryException("Имя и телефон обязательны.");
-        }
+        if (name == null || name.isBlank() || phone == null || phone.isBlank()) throw new DuplicateEntryException("Имя и телефон обязательны.");
         Subscriber sub = new Subscriber(name, phone, 0.0, false);
         subscriberDao.add(sub);
         resp.sendRedirect("app?command=showAllSubscribers");
@@ -206,9 +223,7 @@ public class FrontControllerFilter implements Filter {
     private void handleLinkService(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         int subId = parseIntSafe(req.getParameter("subscriberId"), -1);
         int srvId = parseIntSafe(req.getParameter("serviceId"), -1);
-        if (subId > 0 && srvId > 0) {
-            serviceDao.linkServiceToSubscriber(subId, srvId);
-        }
+        if (subId > 0 && srvId > 0) serviceDao.linkServiceToSubscriber(subId, srvId);
         resp.sendRedirect("app?command=details&id=" + subId);
     }
 
@@ -224,8 +239,8 @@ public class FrontControllerFilter implements Filter {
     }
 
     private WebContext buildContext(HttpServletRequest req, HttpServletResponse resp) {
-        // Логика куки для визитов
         HttpSession session = req.getSession(true);
+
         int visitCount = 0;
         String lastVisit = "Never";
         Optional<Cookie> visitCookie = Arrays.stream(req.getCookies() == null ? new Cookie[0] : req.getCookies())
@@ -233,7 +248,6 @@ public class FrontControllerFilter implements Filter {
         if (visitCookie.isPresent()) visitCount = parseIntSafe(visitCookie.get().getValue(), 0);
         visitCount++;
         String currentVisitTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
-
         Cookie c1 = new Cookie("visitCount", String.valueOf(visitCount)); c1.setPath("/"); c1.setMaxAge(3600*24);
         Cookie c2 = new Cookie("lastVisit", currentVisitTime); c2.setPath("/"); c2.setMaxAge(3600*24);
         resp.addCookie(c1);
@@ -243,12 +257,15 @@ public class FrontControllerFilter implements Filter {
         ctx.setVariable("visitCount", visitCount);
         ctx.setVariable("lastVisit", lastVisit);
         ctx.setVariable("session", session);
-        return ctx;
-    }
+        ctx.setVariable("currentUser", session.getAttribute("user"));
 
-    private void processTemplate(String templateName, HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        WebContext ctx = buildContext(req, resp);
-        templateEngine.process(templateName, ctx, resp.getWriter());
+        String flashError = (String) session.getAttribute("flashErrorMessage");
+        if (flashError != null) {
+            ctx.setVariable("errorMessage", flashError);
+            session.removeAttribute("flashErrorMessage");
+        }
+
+        return ctx;
     }
 
     private void handleError(HttpServletRequest req, HttpServletResponse resp, Exception e) throws ServletException, IOException {
@@ -261,8 +278,5 @@ public class FrontControllerFilter implements Filter {
         try { return Integer.parseInt(val); } catch (Exception e) { return def; }
     }
 
-    @Override
-    public void destroy() {
-        JpaManager.getEntityManager().close();
-    }
+    @Override public void destroy() { JpaManager.getEntityManager().close(); }
 }

@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>Все абоненты</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 
 <header>
     <h1>Список всех абонентов</h1>
-    <a th:href="@{/index.html}" class="home-link">На главную</a>
+    <a th:href="@{/app(command='home')}" class="home-link">На главную</a>
 </header>
 
 <div class="container">
 
     <div class="cookie-info">
         Ваш <b th:text="${visitCount}">N</b>-й визит.
-        Последнее посещение: <b th:text="${lastVisit}">...</b>
     </div>
 
     <div th:if="${subscribers.isEmpty()}">
@@ -46,13 +41,10 @@
             <td th:text="${#numbers.formatDecimal(sub.balance, 1, 2)}">100.00</td>
             <td th:text="${sub.isBlocked ? 'Заблокирован' : 'Активен'}">Активен</td>
             <td>
-                <a th:href="@{/app(command='details', id=${sub.id})}"
-                   class="action-link">
-                    Детали
-                </a>
+                <a th:href="@{/app(command='details', id=${sub.id})}" class="action-link">Детали</a>
 
                 <a th:href="@{/app(command='block', id=${sub.id})}"
-                   th:if="${!sub.isBlocked}"
+                   th:if="${!sub.isBlocked and currentUser != null and currentUser.role.name() == 'ADMIN'}"
                    class="action-link-red"
                    onclick="return confirm('Вы уверены, что хотите заблокировать этого абонента?');">
                     Блок

@@ -6,9 +6,8 @@ import jakarta.persistence.criteria.Root;
 import org.example.dao.api.InvoiceDao;
 import org.example.dao.api.ServiceDao;
 import org.example.dao.api.SubscriberDao;
-import org.example.entity.Invoice;
-import org.example.entity.Service;
-import org.example.entity.Subscriber;
+import org.example.dao.api.UserDao;
+import org.example.entity.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,35 +17,43 @@ public class DataInitializer {
     public static void insertInitialData(
             SubscriberDao subscriberDao,
             ServiceDao serviceDao,
-            InvoiceDao invoiceDao) {
+            InvoiceDao invoiceDao,
+            UserDao userDao) { // Добавили UserDao
 
         try {
             subscriberDao.runInTransaction(em -> {
+                // Очистка таблиц
                 CriteriaBuilder cb = em.getCriteriaBuilder();
-                CriteriaQuery<Subscriber> cqSub = cb.createQuery(Subscriber.class);
-                Root<Subscriber> rootSub = cqSub.from(Subscriber.class);
-                cqSub.select(rootSub);
-                List<Subscriber> allSubscribers = em.createQuery(cqSub).getResultList();
-                for (Subscriber sub : allSubscribers) {
-                    em.remove(sub);
-                }
 
+                // Удаляем Invoice
+                CriteriaQuery<Invoice> cqInv = cb.createQuery(Invoice.class);
+                cqInv.select(cqInv.from(Invoice.class));
+                for (Invoice i : em.createQuery(cqInv).getResultList()) em.remove(i);
+
+                // Удаляем Subscriber
+                CriteriaQuery<Subscriber> cqSub = cb.createQuery(Subscriber.class);
+                cqSub.select(cqSub.from(Subscriber.class));
+                for (Subscriber s : em.createQuery(cqSub).getResultList()) em.remove(s);
+
+                // Удаляем Service
                 CriteriaQuery<Service> cqSrv = cb.createQuery(Service.class);
-                Root<Service> rootSrv = cqSrv.from(Service.class);
-                cqSrv.select(rootSrv);
-                List<Service> allServices = em.createQuery(cqSrv).getResultList();
-                for (Service srv : allServices) {
-                    em.remove(srv);
-                }
+                cqSrv.select(cqSrv.from(Service.class));
+                for (Service s : em.createQuery(cqSrv).getResultList()) em.remove(s);
+
+                // Удаляем User
+                CriteriaQuery<User> cqUser = cb.createQuery(User.class);
+                cqUser.select(cqUser.from(User.class));
+                for (User u : em.createQuery(cqUser).getResultList()) em.remove(u);
 
                 em.flush();
 
-                Subscriber sub1 = new Subscriber(
-                        "Иван Иванов", "+375291234567", 150.50, false
-                );
-                Subscriber sub2 = new Subscriber(
-                        "Петр Петров", "+375337654321", -50.00, true
-                );
+                // 1. Создаем Админа
+                User admin = new User("admin", "admin", Role.ADMIN);
+                em.persist(admin);
+
+                // 2. Создаем тестовые данные абонентов
+                Subscriber sub1 = new Subscriber("Иван Иванов", "+375291234567", 150.50, false);
+                Subscriber sub2 = new Subscriber("Петр Петров", "+375337654321", -50.00, true);
                 em.persist(sub1);
                 em.persist(sub2);
 
@@ -59,19 +66,13 @@ public class DataInitializer {
 
                 sub1.getServices().add(serv1);
                 sub1.getServices().add(serv2);
-
                 sub2.getServices().add(serv2);
                 sub2.getServices().add(serv3);
 
-                Invoice inv1 = new Invoice(
-                        750.00, LocalDate.parse("2025-09-01"), true, sub1
-                );
-                Invoice inv2 = new Invoice(
-                        400.00, LocalDate.parse("2025-09-05"), false, sub2
-                );
+                Invoice inv1 = new Invoice(750.00, LocalDate.parse("2025-09-01"), true, sub1);
+                Invoice inv2 = new Invoice(400.00, LocalDate.parse("2025-09-05"), false, sub2);
                 em.persist(inv1);
                 em.persist(inv2);
-
             });
 
         } catch (Exception e) {

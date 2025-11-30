@@ -4,6 +4,24 @@
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
 
+    <filter>
+        <filter-name>SecurityFilter</filter-name>
+        <filter-class>org.example.web.SecurityFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>SecurityFilter</filter-name>
+        <url-pattern>/app/*</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>FrontControllerFilter</filter-name>
+        <filter-class>org.example.web.FrontControllerFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>FrontControllerFilter</filter-name>
+        <url-pattern>/app/*</url-pattern>
+    </filter-mapping>
+
     <welcome-file-list>
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
@@ -16,4 +34,5 @@
         <exception-type>java.lang.Exception</exception-type>
         <location>/error.html</location>
     </error-page>
+
 </web-app>

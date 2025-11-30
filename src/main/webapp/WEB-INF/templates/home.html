@@ -6,26 +6,66 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+
 <header>
     <h1>Система управления "Telecom App"</h1>
+
     <div style="margin-top: 10px; font-size: 0.9em;">
-        <a th:href="@{/app(command='showRegisterForm')}" class="action-link">Регистрация</a>
+        <span th:if="${currentUser == null}">
+            Гость |
+            <a th:href="@{/app(command='showLoginForm')}" class="action-link-green">Войти</a> |
+            <a th:href="@{/app(command='showRegisterForm')}" class="action-link">Регистрация</a>
+        </span>
+
+        <span th:if="${currentUser != null}">
+            Вы вошли как: <b th:text="${currentUser.login}">User</b> (<span th:text="${currentUser.role}">ROLE</span>) |
+            <a th:href="@{/app(command='logout')}" class="action-link-red">Выйти</a>
+        </span>
     </div>
 </header>
 
 <div class="container">
+
+    <div th:if="${errorMessage}" class="error-container" style="margin-bottom: 20px;">
+        <p th:text="${errorMessage}">Ошибка доступа</p>
+    </div>
+
     <nav>
         <h2>Меню:</h2>
         <ul>
-            <li><a th:href="@{/app(command='showAllSubscribers')}">Показать всех абонентов</a></li>
-            <li><a th:href="@{/app(command='showAddSubscriberForm')}" style="color: #198754;">Добавить нового абонента</a></li>
-            <li><a th:href="@{/app(command='showAllServices')}">Показать все услуги</a></li>
-            <li><a th:href="@{/app(command='showUnpaidInvoices')}">Неоплаченные счета</a></li>
-            <li style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
-                <a th:href="@{/app(command='initData')}" style="color: #d9534f;" onclick="return confirm('Сбросить базу данных?');">Сброс БД</a>
+            <li th:if="${currentUser != null}">
+                <a th:href="@{/app(command='showAllSubscribers')}">Показать всех абонентов</a>
+            </li>
+
+            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}">
+                <a th:href="@{/app(command='showAddSubscriberForm')}" style="color: #198754;">
+                    Добавить нового абонента
+                </a>
+            </li>
+
+            <li th:if="${currentUser != null}">
+                <a th:href="@{/app(command='showAllServices')}">Показать все услуги</a>
+            </li>
+
+            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}">
+                <a th:href="@{/app(command='showUnpaidInvoices')}">Неоплаченные счета</a>
+            </li>
+
+            <li th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}"
+                style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+                <a th:href="@{/app(command='initData')}"
+                   style="color: #d9534f;"
+                   onclick="return confirm('Сбросить базу данных и создать админа по умолчанию?');">
+                    Сброс БД
+                </a>
             </li>
         </ul>
+
+        <div th:if="${currentUser == null}">
+            <p>Пожалуйста, войдите в систему или зарегистрируйтесь, чтобы увидеть меню.</p>
+        </div>
     </nav>
 </div>
+
 </body>
 </html>
